@@ -51,7 +51,6 @@ class CoverageCollector(object):
             logging.info("Running coverage analysis for file `%s`" % os.path.basename(test_case))
             if not self.run_test_case(command, test_case):
                 logging.error("Could not execute test case `%s`" % os.path.basename(test_case))
-                return False
 
         return True
 
@@ -74,8 +73,8 @@ class CoverageCollector(object):
             output = subprocess.check_output(trace_command)
             logging.debug(output)
 
-        except Exception as identifier:
-            logging.error("Could not execute tracing command: %s" % identifier)
+        except subprocess.CalledProcessError as error:
+            logging.warning("Tracing test case returned non zero exit status (%d)" % error.returncode)
             return False
 
         return True
