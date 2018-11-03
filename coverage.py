@@ -4,7 +4,12 @@ import os
 import sys
 import logging
 import argparse
+import functools
 import subprocess
+import multiprocessing
+
+def run_test_case_wrapper(arg, **kwarg):
+    return CoverageCollector.run_test_case(*arg, **kwarg)
 
 class CoverageCollector(object):
     def __init__(self, dr_path, output, debug_level=0):
@@ -47,10 +52,19 @@ class CoverageCollector(object):
             return False
 
         # For each of the files, run the code coverage program.
-        for test_case in test_cases:
-            logging.info("Running coverage analysis for file `%s`" % os.path.basename(test_case))
-            if not self.run_test_case(command, test_case):
-                logging.error("Could not execute test case `%s`" % os.path.basename(test_case))
+        try:
+            # Run the tests cases in parallel.
+            pool = multiprocessing.Pool(processes=8)
+
+            # Build tuples with the arguments. We need to pass self explicitly in order for our wrapper to work.
+            arguments = zip([self] * len(test_cases), [command] * len(test_cases), test_cases)
+
+            # Use map to call the wrapper.
+            pool.map(run_test_case_wrapper, arguments)
+
+        finally:
+            pool.close()
+            pool.join()
 
         return True
 
